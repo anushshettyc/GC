@@ -5,7 +5,6 @@
   <title>ABC Bank - Chat Support</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <!-- Dummy logo -->
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -31,16 +30,24 @@
       box-shadow: 0 4px 6px rgba(0,0,0,0.2);
       cursor: pointer;
       z-index: 1000;
+      transition: opacity 0.3s ease;
     }
 
     .chat-button:hover {
       background-color: #005bb5;
     }
+
+    .hidden {
+      display: none;
+    }
   </style>
 
-  <!-- Genesys Messenger Script -->
   <script type="text/javascript" charset="utf-8">
-    function loadGenesysChat() {
+    function loadGenesysChat(button) {
+      // Hide the button
+      button.classList.add('hidden');
+
+      // Load Genesys chat
       (function (g, e, n, es, ys) {
         g['_genesysJs'] = e;
         g[e] = g[e] || function () {
@@ -55,7 +62,7 @@
         document.head.appendChild(ys);
       })(window, 'Genesys', 'https://apps.mypurecloud.jp/genesys-bootstrap/genesys.min.js', {
         environment: 'prod-apne1',
-        deploymentId: '349d77da-157f-42d4-81f2-ea4e78c1ef5c' // Your deployment ID
+        deploymentId: '349d77da-157f-42d4-81f2-ea4e78c1ef5c'
       });
     }
   </script>
@@ -67,7 +74,7 @@
   <p>How can we assist you today?</p>
 
   <!-- Floating Chat Button -->
-  <button class="chat-button" onclick="loadGenesysChat()">
+  <button class="chat-button" onclick="loadGenesysChat(this)">
     💬 Click to Talk to a Robot
   </button>
 
