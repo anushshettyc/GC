@@ -1,92 +1,75 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Welcome to ABC Bank</title>
+  <meta charset="UTF-8">
+  <title>ABC Bank - Chat Support</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Dummy logo -->
   <style>
     body {
       font-family: Arial, sans-serif;
       margin: 0;
-      padding: 0;
-      background: #f4f4f4;
-    }
-
-    header {
-      background-color: #004080;
-      color: white;
       padding: 20px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-
-    header img {
-      height: 40px;
-    }
-
-    main {
-      padding: 40px;
       text-align: center;
     }
 
-    .chatbot-button {
+    .logo {
+      width: 120px;
+      margin: 20px auto;
+    }
+
+    .chat-button {
       position: fixed;
       bottom: 20px;
       right: 20px;
-      background-color: #004080;
+      background-color: #0072ce;
       color: white;
-      border: none;
-      border-radius: 50px;
       padding: 15px 20px;
-      font-size: 16px;
+      border: none;
+      border-radius: 30px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.2);
       cursor: pointer;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
       z-index: 1000;
     }
 
-    .chatbot-button:hover {
-      background-color: #0059b3;
+    .chat-button:hover {
+      background-color: #005bb5;
     }
   </style>
 
-  <!-- Genesys script will load only once user clicks the button -->
-  <script>
-    function loadGenesysMessenger() {
-      if (window.Genesys) return; // Prevent double loading
+  <!-- Genesys Messenger Script -->
+  <script type="text/javascript" charset="utf-8">
+    function loadGenesysChat() {
       (function (g, e, n, es, ys) {
         g['_genesysJs'] = e;
         g[e] = g[e] || function () {
-          (g[e].q = g[e].q || []).push(arguments);
+          (g[e].q = g[e].q || []).push(arguments)
         };
         g[e].t = 1 * new Date();
         g[e].c = es;
-        ys = document.createElement('script');
-        ys.async = 1;
-        ys.src = n;
-        ys.charset = 'utf-8';
+        ys = document.createElement('script'); 
+        ys.async = 1; 
+        ys.src = n; 
+        ys.charset = 'utf-8'; 
         document.head.appendChild(ys);
       })(window, 'Genesys', 'https://apps.mypurecloud.jp/genesys-bootstrap/genesys.min.js', {
         environment: 'prod-apne1',
-        deploymentId: '349d77da-157f-42d4-81f2-ea4e78c1ef5c'
+        deploymentId: '349d77da-157f-42d4-81f2-ea4e78c1ef5c' // Your deployment ID
       });
     }
   </script>
 </head>
-
 <body>
-  <header>
-    <div>
-      <img src="https://via.placeholder.com/150x40?text=ABC+Bank+Logo" alt="ABC Bank Logo" />
-    </div>
-    <h1>Welcome to ABC Bank</h1>
-  </header>
 
-  <main>
-    <h2>Your Trusted Partner in Banking</h2>
-    <p>Click the chat button below to speak to our virtual assistant.</p>
-  </main>
+  <img class="logo" src="https://via.placeholder.com/120x60.png?text=ABC+Bank" alt="ABC Bank Logo">
+  <h1>Welcome to ABC Bank</h1>
+  <p>How can we assist you today?</p>
 
-  <button class="chatbot-button" onclick="loadGenesysMessenger()">💬 Talk to Bot</button>
+  <!-- Floating Chat Button -->
+  <button class="chat-button" onclick="loadGenesysChat()">
+    💬 Click to Talk to a Robot
+  </button>
+
 </body>
 </html>
