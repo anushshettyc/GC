@@ -54,15 +54,30 @@
       padding: 60px 20px;
       background: linear-gradient(to right, #3f51b5, #1a237e);
       color: white;
-      text-align: center;
+      display: flex;
+      flex-direction: row;
+      justify-content: space-between;
+      align-items: center;
+      gap: 40px;
     }
 
-    .hero h2 {
+    .hero img {
+      max-width: 300px;
+      height: auto;
+      border-radius: 12px;
+      background-color: #ffffff20;
+    }
+
+    .hero-text {
+      max-width: 600px;
+    }
+
+    .hero-text h2 {
       font-size: 36px;
       margin-bottom: 10px;
     }
 
-    .hero p {
+    .hero-text p {
       font-size: 18px;
       margin-bottom: 30px;
     }
@@ -70,7 +85,6 @@
     .buttons {
       display: flex;
       flex-wrap: wrap;
-      justify-content: center;
       gap: 15px;
     }
 
@@ -121,9 +135,16 @@
       background-image: linear-gradient(45deg, #feb47b, #ff7e5f);
     }
 
-    @media (max-width: 600px) {
-      .hero h2 { font-size: 28px; }
-      .buttons button { width: 90%; }
+    @media (max-width: 768px) {
+      .hero {
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .hero img {
+        max-width: 100%;
+        margin-top: 20px;
+      }
     }
   </style>
 </head>
@@ -143,14 +164,19 @@
   </div>
 
   <section class="hero">
-    <h2>Smart. Secure. SASS Bank.</h2>
-    <p>Bank smarter with powerful digital tools & trusted support.</p>
-    <div class="buttons">
-      <button onclick="showLogin()">Login to NetBanking</button>
-      <button>Open New Account</button>
-      <button>Apply for Personal Loan</button>
-      <button>Credit Card Offers</button>
-      <button>International Banking</button>
+    <!-- Left-side placeholder image -->
+    <img src="" alt="Bank visual" id="hero-image" />
+
+    <div class="hero-text">
+      <h2>Smart. Secure. SASS Bank.</h2>
+      <p>Bank smarter with powerful digital tools & trusted support.</p>
+      <div class="buttons">
+        <button onclick="showLogin()">Login to NetBanking</button>
+        <button>Open New Account</button>
+        <button>Apply for Personal Loan</button>
+        <button>Credit Card Offers</button>
+        <button>International Banking</button>
+      </div>
     </div>
   </section>
 
@@ -159,11 +185,16 @@
   </footer>
 
   <!-- Chat Support Button -->
-  <button class="chat-button" onclick="loadGenesysChat()">💬 Chat Support</button>
+  <button class="chat-button" id="chatBtn" onclick="loadGenesysChat()">💬 Chat Support</button>
 
   <!-- Genesys Chat Loader -->
   <script>
     function loadGenesysChat() {
+      // Hide the button
+      const chatBtn = document.getElementById('chatBtn');
+      if (chatBtn) chatBtn.style.display = 'none';
+
+      // Open or load Genesys Messenger
       if (window.Genesys) {
         Genesys("command", "Messenger.open");
         return;
