@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Voice Banking Assistant</title>
+    <title>Voice Banking Assistant Debug</title>
     <style>
         * {
             margin: 0;
@@ -348,28 +348,41 @@
         async function sendToLambda(text) {
             const lambdaUrl = lambdaUrlInput.value.trim();
             
+            const payload = {
+                inputText: text
+            };
+            
+            console.log('Sending to Lambda:', payload);
+            console.log('Lambda URL:', lambdaUrl);
+            
             try {
                 const response = await fetch(lambdaUrl, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({
-                        inputText: text
-                    })
+                    body: JSON.stringify(payload)
                 });
 
+                console.log('Response status:', response.status);
+                console.log('Response headers:', [...response.headers.entries()]);
+
                 if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('Error response:', errorText);
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
 
                 const data = await response.json();
+                console.log('Response data:', data);
+                
                 const reply = data.reply || data.body?.reply || 'No response received';
                 
                 responseDiv.textContent = reply;
                 speakResponse(reply);
                 
             } catch (error) {
+                console.error('Full error:', error);
                 showError(`Error communicating with Lambda: ${error.message}`);
                 resetUI();
             }
