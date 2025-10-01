@@ -498,16 +498,19 @@
         recognition.onend = () => {
             isListening = false;
             voiceBtn.classList.remove('listening');
-            
-            // Don't auto-restart if modal is closed or processing
-            if (!modalOpen || document.getElementById('status').classList.contains('processing')) {
-                return;
-            }
+            console.log('Recognition ended');
         };
 
         recognition.onresult = async (event) => {
             const transcript = event.results[0][0].transcript;
             console.log('Transcript:', transcript);
+            
+            // Stop recognition to prevent abort errors
+            try {
+                recognition.stop();
+            } catch (e) {
+                console.log('Recognition already stopped');
+            }
             
             addMessage(transcript, 'user');
             updateStatus('Processing your request...', 'processing');
@@ -527,7 +530,11 @@
                 // Restart listening after error
                 if (modalOpen && autoListenEnabled) {
                     setTimeout(() => {
-                        recognition.start();
+                        try {
+                            recognition.start();
+                        } catch (e) {
+                            console.log('Recognition already started');
+                        }
                     }, 2000);
                 }
             }
@@ -536,20 +543,44 @@
         recognition.onerror = (event) => {
             console.error('Speech recognition error:', event.error);
             
-            if (event.error === 'no-speech') {
-                updateStatus('No speech detected. Listening again...', '');
-            } else {
-                updateStatus(`Error: ${event.error}. Retrying...`, '');
-            }
-            
             isListening = false;
             voiceBtn.classList.remove('listening');
             
-            // Retry listening
-            if (modalOpen && autoListenEnabled) {
-                setTimeout(() => {
-                    recognition.start();
-                }, 2000);
+            // Handle different error types
+            if (event.error === 'no-speech') {
+                updateStatus('No speech detected. Listening again...', '');
+                // Restart immediately for no-speech
+                if (modalOpen && autoListenEnabled) {
+                    setTimeout(() => {
+                        try {
+                            recognition.start();
+                        } catch (e) {
+                            console.log('Recognition already started');
+                        }
+                    }, 1000);
+                }
+            } else if (event.error === 'aborted') {
+                console.log('Speech recognition aborted - this is normal during processing');
+                // Don't show error for aborted, it's expected during transitions
+                return;
+            } else if (event.error === 'audio-capture') {
+                updateStatus('Microphone error. Please check permissions.', '');
+                alert('Please allow microphone access to use voice assistant.');
+            } else if (event.error === 'not-allowed') {
+                updateStatus('Microphone access denied.', '');
+                alert('Please allow microphone access in your browser settings.');
+            } else {
+                updateStatus(`Error: ${event.error}. Retrying...`, '');
+                // Retry for other errors
+                if (modalOpen && autoListenEnabled) {
+                    setTimeout(() => {
+                        try {
+                            recognition.start();
+                        } catch (e) {
+                            console.log('Recognition already started');
+                        }
+                    }, 2000);
+                }
             }
         };
 
@@ -609,35 +640,53 @@
         function speakResponse(text) {
             return new Promise((resolve) => {
                 if ('speechSynthesis' in window) {
-                    window.speechSynthesis.cancel(); // Cancel any ongoing speech
+                    // Cancel any ongoing speech first
+                    window.speechSynthesis.cancel();
                     
-                    const utterance = new SpeechSynthesisUtterance(text);
-                    utterance.rate = 1.0;
-                    utterance.pitch = 1.0;
-                    utterance.volume = 1.0;
-                    
-                    utterance.onstart = () => {
-                        updateStatus('Speaking...', 'processing');
-                    };
-                    
-                    utterance.onend = () => {
-                        updateStatus('Listening... Speak now', 'listening');
+                    // Small delay to ensure cancellation is complete
+                    setTimeout(() => {
+                        const utterance = new SpeechSynthesisUtterance(text);
+                        utterance.rate = 1.0;
+                        utterance.pitch = 1.0;
+                        utterance.volume = 1.0;
                         
-                        // Automatically start listening again after speaking
-                        if (modalOpen && autoListenEnabled) {
-                            setTimeout(() => {
-                                recognition.start();
-                            }, 500);
-                        }
-                        resolve();
-                    };
-                    
-                    utterance.onerror = () => {
-                        console.error('Speech synthesis error');
-                        resolve();
-                    };
-                    
-                    window.speechSynthesis.speak(utterance);
+                        utterance.onstart = () => {
+                            updateStatus('Speaking...', 'processing');
+                        };
+                        
+                        utterance.onend = () => {
+                            updateStatus('Listening... Speak now', 'listening');
+                            
+                            // Automatically start listening again after speaking
+                            if (modalOpen && autoListenEnabled) {
+                                setTimeout(() => {
+                                    try {
+                                        recognition.start();
+                                    } catch (e) {
+                                        console.log('Recognition already started or error:', e);
+                                    }
+                                }, 500);
+                            }
+                            resolve();
+                        };
+                        
+                        utterance.onerror = (error) => {
+                            console.error('Speech synthesis error:', error);
+                            // Still resolve and continue
+                            if (modalOpen && autoListenEnabled) {
+                                setTimeout(() => {
+                                    try {
+                                        recognition.start();
+                                    } catch (e) {
+                                        console.log('Recognition already started');
+                                    }
+                                }, 500);
+                            }
+                            resolve();
+                        };
+                        
+                        window.speechSynthesis.speak(utterance);
+                    }, 100);
                 } else {
                     resolve();
                 }
