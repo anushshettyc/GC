@@ -209,8 +209,8 @@
             position: fixed;
             bottom: 120px;
             right: 30px;
-            width: 450px;
-            height: 650px;
+            width: 380px;
+            height: 500px;
             background: white;
             border-radius: 20px;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
@@ -226,41 +226,62 @@
         .modal-header {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            padding: 25px;
+            padding: 20px;
             text-align: center;
+            position: relative;
         }
 
         .modal-header h1 {
-            font-size: 20px;
-            margin-bottom: 5px;
+            font-size: 18px;
+            margin-bottom: 3px;
         }
 
         .modal-header p {
-            font-size: 13px;
+            font-size: 12px;
             opacity: 0.9;
         }
 
         .close-modal {
             position: absolute;
-            top: 15px;
-            right: 20px;
+            top: 10px;
+            right: 15px;
             background: none;
             border: none;
             color: white;
-            font-size: 28px;
+            font-size: 24px;
             cursor: pointer;
             font-weight: 300;
+            line-height: 1;
+        }
+
+        .end-conversation-btn {
+            position: absolute;
+            top: 10px;
+            left: 15px;
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background 0.3s;
+        }
+
+        .end-conversation-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
         }
 
         .chat-container {
             flex: 1;
             overflow-y: auto;
-            padding: 20px;
+            padding: 15px;
             background: #f8f9fa;
         }
 
         .message {
-            margin-bottom: 15px;
+            margin-bottom: 12px;
             animation: fadeIn 0.3s ease-in;
         }
 
@@ -281,10 +302,11 @@
 
         .message-bubble {
             display: inline-block;
-            padding: 12px 18px;
-            border-radius: 18px;
+            padding: 10px 15px;
+            border-radius: 15px;
             max-width: 80%;
             word-wrap: break-word;
+            font-size: 14px;
         }
 
         .message.user .message-bubble {
@@ -299,23 +321,23 @@
         }
 
         .timestamp {
-            font-size: 11px;
+            font-size: 10px;
             opacity: 0.6;
-            margin-top: 5px;
+            margin-top: 4px;
         }
 
         .controls {
-            padding: 20px;
+            padding: 15px;
             background: white;
             border-top: 1px solid #e0e0e0;
         }
 
         .status {
             text-align: center;
-            padding: 12px;
-            font-size: 14px;
+            padding: 10px;
+            font-size: 13px;
             color: #6b7280;
-            min-height: 45px;
+            min-height: 40px;
             font-weight: 500;
         }
 
@@ -344,7 +366,7 @@
                 width: calc(100vw - 20px);
                 right: 10px;
                 bottom: 100px;
-                height: 500px;
+                height: 450px;
             }
 
             .hero h1 {
@@ -422,6 +444,7 @@
     <!-- Voice Assistant Modal -->
     <div class="voice-modal" id="voiceModal">
         <div class="modal-header">
+            <button class="end-conversation-btn" id="endConversation">End Call</button>
             <button class="close-modal" id="closeModal">×</button>
             <h1>🎙️ Voice Assistant</h1>
             <p>IDFC First Bank - Powered by AI</p>
@@ -467,6 +490,7 @@
         const voiceBtn = document.getElementById('voiceBtn');
         const voiceModal = document.getElementById('voiceModal');
         const closeModal = document.getElementById('closeModal');
+        const endConversation = document.getElementById('endConversation');
 
         voiceBtn.addEventListener('click', () => {
             voiceModal.classList.add('active');
@@ -474,11 +498,40 @@
             autoListenEnabled = true;
             // Automatically start listening when modal opens
             setTimeout(() => {
-                recognition.start();
+                try {
+                    recognition.start();
+                } catch (e) {
+                    console.log('Recognition start error:', e);
+                }
             }, 500);
         });
 
         closeModal.addEventListener('click', () => {
+            stopAssistant();
+        });
+
+        endConversation.addEventListener('click', () => {
+            if (confirm('Are you sure you want to end this conversation?')) {
+                stopAssistant();
+                // Clear conversation history
+                const chatContainer = document.getElementById('chatContainer');
+                chatContainer.innerHTML = `
+                    <div class="message agent">
+                        <div class="message-bubble">
+                            Hello! I'm your IDFC First Bank assistant. How can I help you today?
+                        </div>
+                        <div class="timestamp">Just now</div>
+                    </div>
+                `;
+                // Reset session
+                sessionStorage.removeItem('bedrockSessionId');
+                conversationSessionId = `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+                sessionStorage.setItem('bedrockSessionId', conversationSessionId);
+                updateSessionInfo();
+            }
+        });
+
+        function stopAssistant() {
             voiceModal.classList.remove('active');
             modalOpen = false;
             autoListenEnabled = false;
@@ -487,7 +540,8 @@
             }
             window.speechSynthesis.cancel();
             voiceBtn.classList.remove('listening');
-        });
+            updateStatus('Click to start', '');
+        }
 
         recognition.onstart = () => {
             isListening = true;
@@ -649,45 +703,62 @@
                         utterance.rate = 1.0;
                         utterance.pitch = 1.0;
                         utterance.volume = 1.0;
+                        utterance.lang = 'en-US';
                         
                         utterance.onstart = () => {
+                            console.log('Started speaking:', text);
                             updateStatus('Speaking...', 'processing');
                         };
                         
                         utterance.onend = () => {
+                            console.log('Finished speaking');
                             updateStatus('Listening... Speak now', 'listening');
                             
                             // Automatically start listening again after speaking
                             if (modalOpen && autoListenEnabled) {
                                 setTimeout(() => {
                                     try {
+                                        console.log('Auto-starting recognition after speech');
                                         recognition.start();
                                     } catch (e) {
-                                        console.log('Recognition already started or error:', e);
+                                        console.log('Recognition start error after speech:', e);
                                     }
-                                }, 500);
+                                }, 800);
                             }
                             resolve();
                         };
                         
                         utterance.onerror = (error) => {
                             console.error('Speech synthesis error:', error);
+                            updateStatus('Speech error. Listening...', 'listening');
                             // Still resolve and continue
                             if (modalOpen && autoListenEnabled) {
                                 setTimeout(() => {
                                     try {
                                         recognition.start();
                                     } catch (e) {
-                                        console.log('Recognition already started');
+                                        console.log('Recognition start error after speech error:', e);
                                     }
-                                }, 500);
+                                }, 800);
                             }
                             resolve();
                         };
                         
+                        console.log('Speaking text:', text);
                         window.speechSynthesis.speak(utterance);
-                    }, 100);
+                    }, 200);
                 } else {
+                    console.log('Speech synthesis not available');
+                    // If speech synthesis not available, just continue listening
+                    if (modalOpen && autoListenEnabled) {
+                        setTimeout(() => {
+                            try {
+                                recognition.start();
+                            } catch (e) {
+                                console.log('Recognition start error:', e);
+                            }
+                        }, 500);
+                    }
                     resolve();
                 }
             });
