@@ -557,7 +557,7 @@
 
         recognition.onresult = async (event) => {
             const transcript = event.results[0][0].transcript;
-            console.log('Transcript:', transcript);
+            console.log('Transcript received:', transcript);
             
             // Stop recognition to prevent abort errors
             try {
@@ -571,26 +571,30 @@
             
             try {
                 const response = await sendToLambda(transcript);
+                console.log('Got response from Lambda:', response);
                 addMessage(response, 'agent');
                 
                 // Speak the response and auto-listen after
                 await speakResponse(response);
                 
             } catch (error) {
-                console.error('Error:', error);
-                addMessage('Sorry, there was an error processing your request.', 'agent');
-                updateStatus('Error occurred. Restarting...', '');
+                console.error('Error in onresult:', error);
                 
-                // Restart listening after error
-                if (modalOpen && autoListenEnabled) {
-                    setTimeout(() => {
-                        try {
-                            recognition.start();
-                        } catch (e) {
-                            console.log('Recognition already started');
-                        }
-                    }, 2000);
+                let errorMessage = 'Sorry, there was an error processing your request.';
+                
+                // Provide more specific error messages
+                if (error.message.includes('500')) {
+                    errorMessage = 'Sorry, the AI service is having issues. Please try again.';
+                } else if (error.message.includes('Network')) {
+                    errorMessage = 'Sorry, network connection issue. Please check your internet.';
+                } else if (error.message.includes('No reply')) {
+                    errorMessage = 'Sorry, I didn\'t receive a proper response. Please try again.';
                 }
+                
+                addMessage(errorMessage, 'agent');
+                
+                // Speak the error and continue listening
+                await speakResponse(errorMessage);
             }
         };
 
@@ -639,25 +643,46 @@
         };
 
         async function sendToLambda(text) {
-            const response = await fetch('https://bne36y45fhsixvq6mvnp2ynrqu0aiywl.lambda-url.ap-northeast-1.on.aws/', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
+            console.log('Sending to Lambda:', text);
+            console.log('Session ID:', conversationSessionId);
+            
+            try {
+                const requestBody = {
                     inputText: text,
                     sessionId: conversationSessionId
-                })
-            });
+                };
+                
+                console.log('Request body:', JSON.stringify(requestBody));
+                
+                const response = await fetch('https://bne36y45fhsixvq6mvnp2ynrqu0aiywl.lambda-url.ap-northeast-1.on.aws/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(requestBody)
+                });
 
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                console.log('Response status:', response.status);
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('Lambda error response:', errorText);
+                    throw new Error(`HTTP error! status: ${response.status}, body: ${errorText}`);
+                }
+
+                const data = await response.json();
+                console.log('Lambda response data:', data);
+                
+                if (!data.reply) {
+                    console.error('No reply in response:', data);
+                    throw new Error('No reply field in response');
+                }
+                
+                return data.reply;
+            } catch (error) {
+                console.error('sendToLambda error:', error);
+                throw error;
             }
-
-            const data = await response.json();
-            console.log('Lambda response:', data);
-            
-            return data.reply;
         }
 
         function addMessage(text, type) {
