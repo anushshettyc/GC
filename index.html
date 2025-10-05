@@ -539,6 +539,7 @@
     <script>
         // Configuration
         const LAMBDA_URL = 'YOUR_LAMBDA_API_ENDPOINT_HERE'; // Replace with your Lambda URL
+        const TEST_MODE = (LAMBDA_URL === 'YOUR_LAMBDA_API_ENDPOINT_HERE'); // Auto-enable test mode if URL not set
         const SILENCE_THRESHOLD = 1500; // ms of silence before stopping
         const MIN_SPEECH_DURATION = 500; // minimum speech duration to process
 
@@ -675,20 +676,59 @@
             addMessage('user', text);
 
             try {
-                // Call Lambda
-                const response = await fetch(LAMBDA_URL, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        query: text,
-                        sessionId: sessionId
-                    })
-                });
+                let answer;
 
-                const data = await response.json();
-                const answer = data.answer || 'Sorry, I couldn\'t process that.';
+                // Test mode with simulated responses
+                if (TEST_MODE) {
+                    console.log('TEST MODE: Simulating Lambda response');
+                    await new Promise(resolve => setTimeout(resolve, 800)); // Simulate network delay
+                    
+                    // Simulated responses based on keywords
+                    const lowerText = text.toLowerCase();
+                    if (lowerText.includes('credit card') || lowerText.includes('card')) {
+                        answer = 'We offer several credit cards with great benefits. Our FIRST POWER card gives 10X rewards on travel and dining. Would you like to know more about our credit card offers?';
+                    } else if (lowerText.includes('loan') || lowerText.includes('home loan')) {
+                        answer = 'Our home loans start at 8.75% per annum with flexible tenure up to 30 years. We also offer zero processing fees. Would you like to check your eligibility?';
+                    } else if (lowerText.includes('savings') || lowerText.includes('account')) {
+                        answer = 'Our savings accounts come with zero balance requirement, up to 6% interest, and unlimited free ATM transactions. You can open an account instantly through our app.';
+                    } else if (lowerText.includes('hello') || lowerText.includes('hi')) {
+                        answer = 'Hello! How can I assist you with your banking needs today?';
+                    } else {
+                        answer = 'I can help you with credit cards, loans, savings accounts, and more. What would you like to know about?';
+                    }
+                } else {
+                    // Real Lambda call
+                    const response = await fetch(LAMBDA_URL, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            query: text,
+                            sessionId: sessionId
+                        })
+                    });
+
+                    // Check if response is ok
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+
+                    // Check content type
+                    const contentType = response.headers.get('content-type');
+                    if (!contentType || !contentType.includes('application/json')) {
+                        console.error('Non-JSON response received:', contentType);
+                        const textResponse = await response.text();
+                        console.error('Response text:', textResponse.substring(0, 500));
+                        throw new Error('Server returned non-JSON response. Please check your Lambda endpoint and CORS settings.');
+                    }
+
+                    const data = await response.json();
+                    console.log('Lambda response:', data);
+                    
+                    answer = data.answer || 'Sorry, I couldn\'t process that.';
+                }
 
                 // Add bot response
                 addMessage('bot', answer);
@@ -697,8 +737,18 @@
                 await speakText(answer);
 
             } catch (error) {
-                console.error('Error:', error);
-                const errorMsg = 'Sorry, I encountered an error. Please try again.';
+                console.error('Error details:', error);
+                
+                let errorMsg = 'Sorry, I encountered an error. ';
+                
+                if (error.message.includes('Failed to fetch')) {
+                    errorMsg += 'Cannot connect to the server. Please check if the Lambda URL is correct and CORS is enabled.';
+                } else if (error.message.includes('non-JSON')) {
+                    errorMsg += 'Server configuration issue. Please verify your Lambda endpoint returns JSON.';
+                } else {
+                    errorMsg += 'Please try again or contact support.';
+                }
+                
                 addMessage('bot', errorMsg);
                 await speakText(errorMsg);
             } finally {
@@ -787,8 +837,14 @@
         });
 
         // Initialize
-        console.log('Voice Assistant Ready');
-        console.log('Please update LAMBDA_URL in the script with your Lambda endpoint');
+        if (TEST_MODE) {
+            console.log('🧪 TEST MODE ENABLED - Using simulated responses');
+            console.log('To use real Lambda: Update LAMBDA_URL variable with your API Gateway endpoint');
+        } else {
+            console.log('✅ Voice Assistant Ready - Connected to Lambda');
+        }
+        console.log('Speech Recognition:', recognition ? 'Supported ✓' : 'Not Supported ✗');
+        console.log('Text-to-Speech:', 'speechSynthesis' in window ? 'Supported ✓' : 'Not Supported ✗');
     </script>
 </body>
 </html>
